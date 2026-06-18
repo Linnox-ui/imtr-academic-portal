@@ -1,0 +1,1076 @@
+// ==========================================
+// 1. GLOBAL ENUMS (The Rules engine)
+// ==========================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum CourseCategory {
+  DIPLOMA
+  CERTIFICATE
+  SHORT_COURSE
+}
+
+enum AssessmentMode {
+  CAT_AND_FINAL_EXAM
+  CAT_ONLY
+  NO_EXAM
+  PRACTICAL_ONLY
+  ATTENDANCE_BASED
+  COMPETENCY_BASED
+}
+
+enum AcademicPeriodType {
+  SEMESTER
+  TRAINING_BLOCK
+}
+
+enum UnitAssignmentStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  AMENDMENT_REQUESTED
+  ARCHIVED
+}
+
+enum LecturerAllocationRole {
+  PRIMARY
+  CO_LECTURER
+  ASSISTANT
+}
+
+enum TimetableDay {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+enum AssessmentType {
+  CAT_1
+  CAT_2
+  ASSIGNMENT
+  PRACTICAL
+  PROJECT
+  FINAL_EXAM
+  OTHER
+}
+
+enum ResultWorkflowStatus {
+  DRAFT
+  SUBMITTED_TO_COORDINATOR
+  RETURNED_TO_LECTURER
+  SUBMITTED_TO_ACADEMIC_DIRECTOR
+  RETURNED_TO_COORDINATOR
+  FINAL_APPROVED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum ResultWorkflowAction {
+  CREATED
+  DRAFT_SAVED
+  SUBMITTED_TO_COORDINATOR
+  RETURNED_TO_LECTURER
+  RESUBMITTED_TO_COORDINATOR
+  COORDINATOR_APPROVED_AND_FORWARDED
+  RETURNED_TO_COORDINATOR
+  RESUBMITTED_TO_ACADEMIC_DIRECTOR
+  FINAL_APPROVED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum AccountStatus {
+  PENDING_ACTIVATION
+  ACTIVE
+  SUSPENDED
+  LOCKED
+  DISABLED
+}
+
+enum RecoveryTicketType {
+  NEW_ACCOUNT_ACTIVATION
+  PASSWORD_RECOVERY
+  LOST_CONTACT_ACCESS
+  LOCKED_ACCOUNT
+  OTHER
+}
+
+enum RecoveryTicketStatus {
+  SUBMITTED
+  IDENTITY_REVIEW
+  MORE_INFORMATION_REQUIRED
+  VERIFIED
+  RESET_AUTHORIZED
+  RESOLVED
+  REJECTED
+  CLOSED
+}
+
+enum RecoveryMessageSender {
+  CLAIMANT
+  ICT_ADMIN
+  SUPER_ADMIN
+  SYSTEM
+}
+
+enum RecoveryTokenPurpose {
+  ACCOUNT_ACTIVATION
+  PASSWORD_RESET
+}
+
+enum IdentityVerificationMethod {
+  IDENTITY_RECORD_MATCH
+  EMAIL_OTP
+  PHONE_OTP
+  MANUAL_ICT_REVIEW
+}
+
+enum IdentityVerificationStatus {
+  PENDING
+  PASSED
+  FAILED
+  EXPIRED
+}
+
+// ==========================================
+// 2. IDENTITY & ROLES (The Actors)
+// ==========================================
+
+model Role {
+  id          String  @id @default(cuid())
+  name        String  @unique // super_admin, academic_director, training_admin, ict_admin, coordinator, lecturer, student
+  description String?
+  users       User[]
+}
+
+model User {
+  id                     String        @id @default(cuid())
+  email                  String        @unique
+  firstName              String
+  lastName               String
+  password               String
+  isActive               Boolean       @default(true)
+  accountStatus          AccountStatus @default(ACTIVE)
+  requiresPasswordChange Boolean       @default(true)
+
+  roleId String
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  studentProfile StudentProfile?
+
+  coordinatedCourses         CourseCoordinatorAssignment[] @relation("CourseCoordinator")
+  coordinatorAssignmentsMade CourseCoordinatorAssignment[] @relation("CoordinatorAssignedBy")
+
+  intakeCoordinatorAssignments     IntakeCoordinatorAssignment[] @relation("IntakeCoordinator")
+  intakeCoordinatorAssignmentsMade IntakeCoordinatorAssignment[] @relation("IntakeCoordinatorAssignedBy")
+
+  semesterAssignmentsCreated   SemesterUnitAssignment[] @relation("SemesterAssignmentCreatedBy")
+  semesterAssignmentsSubmitted SemesterUnitAssignment[] @relation("SemesterAssignmentSubmittedBy")
+  semesterAssignmentsReviewed  SemesterUnitAssignment[] @relation("SemesterAssignmentReviewedBy")
+  lecturerUnitAllocations      LecturerUnitAllocation[] @relation("AllocatedLecturer")
+  lecturerAllocationsMade      LecturerUnitAllocation[] @relation("LecturerAllocationCreatedBy")
+  lecturerAllocationsEnded     LecturerUnitAllocation[] @relation("LecturerAllocationEndedBy")
+
+  timetableEntriesAsLecturer TimetableEntry[] @relation("TimetableLecturer")
+  timetableEntriesCreated    TimetableEntry[] @relation("TimetableCreatedBy")
+
+  attendanceSessionsTaken AttendanceSession[]       @relation("AttendanceSessionTakenBy")
+  attendanceRecordsMarked StudentAttendanceRecord[] @relation("AttendanceRecordMarkedBy")
+
+  assessmentsCreated Assessment[] @relation("AssessmentCreatedBy")
+
+  resultSubmissionsCreated             ResultSubmission[] @relation("ResultSubmissionCreatedBy")
+  resultSubmissionsCoordinatorReviewed ResultSubmission[] @relation("ResultSubmissionCoordinatorReviewedBy")
+  resultSubmissionsAcademicReviewed    ResultSubmission[] @relation("ResultSubmissionAcademicReviewedBy")
+  resultSubmissionsPublished           ResultSubmission[] @relation("ResultSubmissionPublishedBy")
+
+  studentResultsEntered StudentAssessmentResult[] @relation("StudentResultEnteredBy")
+  studentResultsEdited  StudentAssessmentResult[] @relation("StudentResultEditedBy")
+
+  resultWorkflowActions ResultWorkflowHistory[]      @relation("ResultWorkflowPerformedBy")
+  studentResultChanges  StudentResultChangeHistory[] @relation("StudentResultChangePerformedBy")
+
+  identityProfile UserIdentityProfile?
+
+  recoveryTickets         AccountRecoveryTicket[] @relation("RecoveryTicketUser")
+  recoveryTicketsAssigned AccountRecoveryTicket[] @relation("RecoveryTicketAssignee")
+  recoveryTicketsVerified AccountRecoveryTicket[] @relation("RecoveryTicketVerifier")
+  recoveryTicketsResolved AccountRecoveryTicket[] @relation("RecoveryTicketResolver")
+
+  recoveryMessagesSent RecoveryTicketMessage[] @relation("RecoveryMessageSenderUser")
+
+  recoveryTokens       AccountRecoveryToken[] @relation("RecoveryTokenUser")
+  recoveryTokensIssued AccountRecoveryToken[] @relation("RecoveryTokenIssuer")
+
+  securityAuditActions SecurityAuditLog[] @relation("SecurityAuditActor")
+  securityAuditTargets SecurityAuditLog[] @relation("SecurityAuditTarget")
+
+  notificationsReceived Notification[] @relation("UserNotifications")
+  notificationsSent     Notification[] @relation("NotificationsSent")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ==========================================
+// 3. THE IMTR TRAINING ENGINE (The Core)
+// ==========================================
+
+model TrainingCourse {
+  id          String         @id @default(cuid())
+  code        String         @unique
+  title       String
+  category    CourseCategory
+  description String?
+
+  intakes      Intake[]
+  units        CourseUnit[]
+  courseYears  CourseYear[]
+  coordinators CourseCoordinatorAssignment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CourseUnit {
+  id          String  @id @default(cuid())
+  code        String
+  title       String
+  description String?
+  isActive    Boolean @default(true)
+
+  courseId String
+  course   TrainingCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  semesterAssignments SemesterUnitAssignment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([courseId, code])
+  @@index([courseId])
+  @@index([isActive])
+}
+
+model CourseYear {
+  id         String  @id @default(cuid())
+  yearNumber Int
+  title      String
+  sequence   Int
+  isActive   Boolean @default(true)
+
+  courseId String
+  course   TrainingCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  semesters CourseSemester[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([courseId, yearNumber])
+  @@unique([courseId, sequence])
+  @@index([courseId])
+  @@index([isActive])
+}
+
+model CourseSemester {
+  id             String             @id @default(cuid())
+  title          String
+  semesterNumber Int?
+  sequence       Int
+  periodType     AcademicPeriodType @default(SEMESTER)
+  isActive       Boolean            @default(true)
+
+  courseYearId String
+  courseYear   CourseYear @relation(fields: [courseYearId], references: [id], onDelete: Cascade)
+
+  unitAssignments SemesterUnitAssignment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([courseYearId, sequence])
+  @@index([courseYearId])
+  @@index([periodType])
+  @@index([isActive])
+}
+
+model SemesterUnitAssignment {
+  id String @id @default(cuid())
+
+  intakeId String?
+  intake   Intake? @relation(fields: [intakeId], references: [id], onDelete: Cascade)
+
+  semesterId String
+  semester   CourseSemester @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+
+  unitId String
+  unit   CourseUnit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  lecturerAllocations LecturerUnitAllocation[]
+  timetableEntries    TimetableEntry[]
+  assessments         Assessment[]
+
+  status UnitAssignmentStatus @default(DRAFT)
+
+  createdById String
+  createdBy   User   @relation("SemesterAssignmentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  submittedById String?
+  submittedBy   User?   @relation("SemesterAssignmentSubmittedBy", fields: [submittedById], references: [id], onDelete: SetNull)
+
+  reviewedById String?
+  reviewedBy   User?   @relation("SemesterAssignmentReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  submittedAt DateTime?
+  reviewedAt  DateTime?
+
+  reviewNote      String?
+  rejectionReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([intakeId, unitId])
+  @@unique([intakeId, semesterId, unitId])
+  @@index([intakeId])
+  @@index([semesterId])
+  @@index([unitId])
+  @@index([status])
+  @@index([intakeId, status])
+  @@index([createdById])
+  @@index([submittedById])
+  @@index([reviewedById])
+}
+
+model CourseCoordinatorAssignment {
+  id String @id @default(cuid())
+
+  courseId String
+  course   TrainingCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation("CourseCoordinator", fields: [userId], references: [id], onDelete: Cascade)
+
+  assignedById String
+  assignedBy   User   @relation("CoordinatorAssignedBy", fields: [assignedById], references: [id], onDelete: Restrict)
+
+  isActive Boolean @default(true)
+
+  assignedAt DateTime  @default(now())
+  endedAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([courseId, userId])
+  @@index([courseId])
+  @@index([userId])
+  @@index([assignedById])
+  @@index([isActive])
+}
+
+model IntakeCoordinatorAssignment {
+  id String @id @default(cuid())
+
+  intakeId String
+  intake   Intake @relation(fields: [intakeId], references: [id], onDelete: Cascade)
+
+  coordinatorId String
+  coordinator   User   @relation("IntakeCoordinator", fields: [coordinatorId], references: [id], onDelete: Restrict)
+
+  assignedById String
+  assignedBy   User   @relation("IntakeCoordinatorAssignedBy", fields: [assignedById], references: [id], onDelete: Restrict)
+
+  isActive Boolean @default(true)
+
+  assignedAt DateTime  @default(now())
+  endedAt    DateTime?
+
+  changeReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([intakeId])
+  @@index([coordinatorId])
+  @@index([assignedById])
+  @@index([isActive])
+  @@index([intakeId, isActive])
+  @@index([coordinatorId, isActive])
+}
+
+model Intake {
+  id    String @id @default(cuid())
+  code  String @unique
+  title String
+  year  Int
+
+  sequenceCounter Int @default(0)
+
+  // Flexible rules defined at the Intake level
+  assessmentMode AssessmentMode @default(CAT_AND_FINAL_EXAM)
+  status         String         @default("UPCOMING") // UPCOMING, ACTIVE, COMPLETED
+
+  courseId String
+  course   TrainingCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  students       StudentProfile[]
+  studentRecords Student[]        @relation("StudentIntake")
+
+  coordinatorAssignments  IntakeCoordinatorAssignment[]
+  semesterUnitAssignments SemesterUnitAssignment[]
+
+  lecturerAllocations LecturerUnitAllocation[]
+  timetableEntries    TimetableEntry[]
+  attendanceSessions  AttendanceSession[]
+  assessments         Assessment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ==========================================
+// 4. STUDENT RECORDS (The Learners)
+// ==========================================
+
+model StudentProfile {
+  id String @id @default(cuid())
+
+  // Automatically generated: IMTR/{INTAKE_CODE}/{SEQUENCE}/{YEAR}
+  admissionNumber String @unique
+
+  // Links to the global User account (for login)
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Links to the specific cohort they belong to
+  intakeId String
+  intake   Intake @relation(fields: [intakeId], references: [id], onDelete: Restrict)
+
+  enrollmentDate DateTime @default(now())
+  academicStatus String   @default("ACTIVE") // ACTIVE, SUSPENDED, GRADUATED, DROPOUT
+
+  assessmentResults StudentAssessmentResult[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Tracks sequential numbers to prevent duplicate Admission Numbers
+model SequenceCounter {
+  id        String   @id // Format: "COURSECODE_YEAR" (e.g., "MMTC21_2026")
+  value     Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+model Student {
+  id              String @id @default(cuid())
+  admissionNumber String @unique // The generated IMTR/MMTC21/001/2026
+
+  // Personal Details
+  firstName   String
+  lastName    String
+  nationalId  String   @unique
+  gender      String
+  dateOfBirth DateTime
+
+  // Contact Info
+  email String @unique
+  phone String
+
+  // Academic Info
+  courseCode String // e.g., "MMTC21"
+
+  intakeId String?
+  intake   Intake? @relation("StudentIntake", fields: [intakeId], references: [id], onDelete: SetNull)
+
+  status String @default("ACTIVE") // ACTIVE, SUSPENDED, GRADUATED
+
+  attendanceRecords StudentAttendanceRecord[]
+  assessmentResults StudentAssessmentResult[]
+
+  notifications Notification[] @relation("StudentNotifications")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([courseCode])
+  @@index([intakeId])
+}
+
+model LecturerUnitAllocation {
+  id String @id @default(cuid())
+
+  intakeId String
+  intake   Intake @relation(fields: [intakeId], references: [id], onDelete: Cascade)
+
+  unitAssignmentId String
+  unitAssignment   SemesterUnitAssignment @relation(fields: [unitAssignmentId], references: [id], onDelete: Cascade)
+
+  lecturerId String
+  lecturer   User   @relation("AllocatedLecturer", fields: [lecturerId], references: [id], onDelete: Restrict)
+
+  allocatedById String
+  allocatedBy   User   @relation("LecturerAllocationCreatedBy", fields: [allocatedById], references: [id], onDelete: Restrict)
+
+  endedById String?
+  endedBy   User?   @relation("LecturerAllocationEndedBy", fields: [endedById], references: [id], onDelete: SetNull)
+
+  allocationRole LecturerAllocationRole @default(PRIMARY)
+
+  isActive Boolean @default(true)
+
+  startsAt DateTime  @default(now())
+  endsAt   DateTime?
+
+  changeReason String?
+
+  assessments      Assessment[]
+  timetableEntries TimetableEntry[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([intakeId])
+  @@index([unitAssignmentId])
+  @@index([lecturerId])
+  @@index([allocatedById])
+  @@index([endedById])
+  @@index([isActive])
+  @@index([intakeId, unitAssignmentId, isActive])
+  @@index([lecturerId, isActive])
+}
+
+model TimetableEntry {
+  id String @id @default(cuid())
+
+  intakeId String
+  intake   Intake @relation(fields: [intakeId], references: [id], onDelete: Cascade)
+
+  unitAssignmentId String
+  unitAssignment   SemesterUnitAssignment @relation(fields: [unitAssignmentId], references: [id], onDelete: Cascade)
+
+  lecturerAllocationId String
+  lecturerAllocation   LecturerUnitAllocation @relation(fields: [lecturerAllocationId], references: [id], onDelete: Cascade)
+
+  lecturerId String
+  lecturer   User   @relation("TimetableLecturer", fields: [lecturerId], references: [id], onDelete: Restrict)
+
+  dayOfWeek TimetableDay
+
+  // Fixed IMTR periods only:
+  // 1 = 08:20-09:20, 2 = 09:20-10:20,
+  // 3 = 11:00-12:00, 4 = 12:00-13:00,
+  // 5 = 14:00-15:00, 6 = 15:00-16:00.
+  // A lesson may use one period or two consecutive periods within the same block.
+  startPeriod Int
+  endPeriod   Int
+
+  room  String?
+  notes String?
+
+  isActive Boolean @default(true)
+
+  attendanceSessions AttendanceSession[]
+
+  createdById String
+  createdBy   User   @relation("TimetableCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([intakeId])
+  @@index([unitAssignmentId])
+  @@index([lecturerAllocationId])
+  @@index([lecturerId])
+  @@index([dayOfWeek])
+  @@index([isActive])
+  @@index([intakeId, dayOfWeek, isActive])
+  @@index([lecturerId, dayOfWeek, isActive])
+  @@index([room, dayOfWeek, isActive])
+}
+
+model AttendanceSession {
+  id String @id @default(cuid())
+
+  intakeId String
+  intake   Intake @relation(fields: [intakeId], references: [id], onDelete: Cascade)
+
+  timetableEntryId String
+  timetableEntry   TimetableEntry @relation(fields: [timetableEntryId], references: [id], onDelete: Cascade)
+
+  sessionDate DateTime     @db.Date
+  dayOfWeek   TimetableDay
+  startPeriod Int
+  endPeriod   Int
+
+  takenById String?
+  takenBy   User?   @relation("AttendanceSessionTakenBy", fields: [takenById], references: [id], onDelete: SetNull)
+
+  notes String?
+
+  records StudentAttendanceRecord[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([timetableEntryId, sessionDate])
+  @@index([intakeId])
+  @@index([timetableEntryId])
+  @@index([sessionDate])
+  @@index([dayOfWeek])
+  @@index([takenById])
+  @@index([intakeId, sessionDate])
+}
+
+model StudentAttendanceRecord {
+  id String @id @default(cuid())
+
+  attendanceSessionId String
+  attendanceSession   AttendanceSession @relation(fields: [attendanceSessionId], references: [id], onDelete: Cascade)
+
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  status  AttendanceStatus @default(PRESENT)
+  remarks String?
+
+  markedById String?
+  markedBy   User?   @relation("AttendanceRecordMarkedBy", fields: [markedById], references: [id], onDelete: SetNull)
+
+  markedAt DateTime @default(now())
+
+  @@unique([attendanceSessionId, studentId])
+  @@index([attendanceSessionId])
+  @@index([studentId])
+  @@index([status])
+  @@index([markedById])
+}
+
+model Assessment {
+  id String @id @default(cuid())
+
+  code  String
+  title String
+  type  AssessmentType
+
+  maxMarks      Decimal  @db.Decimal(6, 2)
+  weightPercent Decimal? @db.Decimal(5, 2)
+
+  assessmentDate DateTime?
+  isActive       Boolean   @default(true)
+
+  intakeId String
+  intake   Intake @relation(fields: [intakeId], references: [id], onDelete: Restrict)
+
+  unitAssignmentId String
+  unitAssignment   SemesterUnitAssignment @relation(fields: [unitAssignmentId], references: [id], onDelete: Restrict)
+
+  lecturerAllocationId String
+  lecturerAllocation   LecturerUnitAllocation @relation(fields: [lecturerAllocationId], references: [id], onDelete: Restrict)
+
+  createdById String
+  createdBy   User   @relation("AssessmentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  resultSubmission ResultSubmission?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([intakeId, unitAssignmentId, code])
+  @@index([intakeId])
+  @@index([unitAssignmentId])
+  @@index([lecturerAllocationId])
+  @@index([createdById])
+  @@index([type])
+  @@index([isActive])
+}
+
+model ResultSubmission {
+  id String @id @default(cuid())
+
+  assessmentId String     @unique
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Restrict)
+
+  status  ResultWorkflowStatus @default(DRAFT)
+  version Int                  @default(1)
+
+  createdById String
+  createdBy   User   @relation("ResultSubmissionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  submittedToCoordinatorAt DateTime?
+
+  coordinatorReviewedById String?
+  coordinatorReviewedBy   User?   @relation("ResultSubmissionCoordinatorReviewedBy", fields: [coordinatorReviewedById], references: [id], onDelete: SetNull)
+
+  coordinatorReviewedAt DateTime?
+  coordinatorComment    String?
+
+  submittedToAcademicDirectorAt DateTime?
+
+  academicReviewedById String?
+  academicReviewedBy   User?   @relation("ResultSubmissionAcademicReviewedBy", fields: [academicReviewedById], references: [id], onDelete: SetNull)
+
+  academicReviewedAt DateTime?
+  academicComment    String?
+  finalApprovedAt    DateTime?
+
+  publishedById String?
+  publishedBy   User?   @relation("ResultSubmissionPublishedBy", fields: [publishedById], references: [id], onDelete: SetNull)
+
+  publishedAt DateTime?
+
+  results         StudentAssessmentResult[]
+  workflowHistory ResultWorkflowHistory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([createdById])
+  @@index([coordinatorReviewedById])
+  @@index([academicReviewedById])
+  @@index([publishedById])
+}
+
+model StudentAssessmentResult {
+  id String @id @default(cuid())
+
+  submissionId String
+  submission   ResultSubmission @relation(fields: [submissionId], references: [id], onDelete: Restrict)
+
+  // New registry-based link used by the current IMTR student registry.
+  // This lets lecturers enter marks for every enrolled student, even if
+  // a student account/profile has not been fully activated yet.
+  studentId String?
+  student   Student? @relation(fields: [studentId], references: [id], onDelete: Restrict)
+
+  // Kept for compatibility with existing student login/profile records.
+  studentProfileId String?
+  studentProfile   StudentProfile? @relation(fields: [studentProfileId], references: [id], onDelete: Restrict)
+
+  marks Decimal? @db.Decimal(6, 2)
+
+  isAbsent   Boolean @default(false)
+  isExempted Boolean @default(false)
+
+  remarks String?
+
+  enteredById String
+  enteredBy   User   @relation("StudentResultEnteredBy", fields: [enteredById], references: [id], onDelete: Restrict)
+
+  lastEditedById String?
+  lastEditedBy   User?   @relation("StudentResultEditedBy", fields: [lastEditedById], references: [id], onDelete: SetNull)
+
+  changes StudentResultChangeHistory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([submissionId, studentId])
+  @@unique([submissionId, studentProfileId])
+  @@index([submissionId])
+  @@index([studentId])
+  @@index([studentProfileId])
+  @@index([enteredById])
+  @@index([lastEditedById])
+}
+
+model ResultWorkflowHistory {
+  id String @id @default(cuid())
+
+  submissionId String
+  submission   ResultSubmission @relation(fields: [submissionId], references: [id], onDelete: Restrict)
+
+  action ResultWorkflowAction
+
+  fromStatus ResultWorkflowStatus?
+  toStatus   ResultWorkflowStatus
+
+  performedById String
+  performedBy   User   @relation("ResultWorkflowPerformedBy", fields: [performedById], references: [id], onDelete: Restrict)
+
+  comment String?
+
+  createdAt DateTime @default(now())
+
+  @@index([submissionId])
+  @@index([performedById])
+  @@index([action])
+  @@index([toStatus])
+  @@index([submissionId, createdAt])
+}
+
+model StudentResultChangeHistory {
+  id String @id @default(cuid())
+
+  studentResultId String
+  studentResult   StudentAssessmentResult @relation(fields: [studentResultId], references: [id], onDelete: Restrict)
+
+  previousMarks Decimal? @db.Decimal(6, 2)
+  newMarks      Decimal? @db.Decimal(6, 2)
+
+  previousAbsent Boolean @default(false)
+  newAbsent      Boolean @default(false)
+
+  previousExempted Boolean @default(false)
+  newExempted      Boolean @default(false)
+
+  previousRemarks String?
+  newRemarks      String?
+
+  performedById String
+  performedBy   User   @relation("StudentResultChangePerformedBy", fields: [performedById], references: [id], onDelete: Restrict)
+
+  reason String?
+
+  createdAt DateTime @default(now())
+
+  @@index([studentResultId])
+  @@index([performedById])
+  @@index([createdAt])
+}
+
+model UserIdentityProfile {
+  id String @id @default(cuid())
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Do not store a raw national ID number.
+  nationalIdHash  String? @unique
+  nationalIdLast4 String?
+
+  dateOfBirth DateTime?
+  phone       String?
+  staffNumber String?   @unique
+
+  emailVerified Boolean @default(false)
+  phoneVerified Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([phone])
+  @@index([dateOfBirth])
+}
+
+model AccountRecoveryTicket {
+  id String @id @default(cuid())
+
+  ticketNumber   String @unique
+  accessCodeHash String
+
+  type   RecoveryTicketType
+  status RecoveryTicketStatus @default(SUBMITTED)
+
+  // The account may initially be unknown.
+  userId String?
+  user   User?   @relation("RecoveryTicketUser", fields: [userId], references: [id], onDelete: SetNull)
+
+  claimantName      String?
+  claimantEmail     String?
+  claimantPhone     String?
+  claimantReference String?
+
+  subject     String
+  description String?
+
+  assignedToId String?
+  assignedTo   User?   @relation("RecoveryTicketAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  identityVerifiedAt DateTime?
+
+  verifiedById String?
+  verifiedBy   User?   @relation("RecoveryTicketVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
+
+  resolvedById String?
+  resolvedBy   User?   @relation("RecoveryTicketResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  resolutionNote String?
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  lastActivityAt DateTime  @default(now())
+  resolvedAt     DateTime?
+  closedAt       DateTime?
+
+  messages             RecoveryTicketMessage[]
+  recoveryTokens       AccountRecoveryToken[]
+  verificationAttempts IdentityVerificationAttempt[]
+  auditLogs            SecurityAuditLog[]
+
+  @@index([status])
+  @@index([type])
+  @@index([userId])
+  @@index([assignedToId])
+  @@index([createdAt])
+  @@index([lastActivityAt])
+}
+
+model RecoveryTicketMessage {
+  id String @id @default(cuid())
+
+  ticketId String
+  ticket   AccountRecoveryTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  senderType RecoveryMessageSender
+
+  senderUserId String?
+  senderUser   User?   @relation("RecoveryMessageSenderUser", fields: [senderUserId], references: [id], onDelete: SetNull)
+
+  body String
+
+  // Internal notes are visible only to authorised support staff.
+  isInternal Boolean @default(false)
+
+  readByClaimantAt DateTime?
+  readByStaffAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ticketId, createdAt])
+  @@index([senderUserId])
+  @@index([isInternal])
+}
+
+model AccountRecoveryToken {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation("RecoveryTokenUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  ticketId String?
+  ticket   AccountRecoveryTicket? @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+
+  purpose RecoveryTokenPurpose
+
+  // Only the token hash is stored in the database.
+  tokenHash String @unique
+
+  expiresAt DateTime
+  usedAt    DateTime?
+  revokedAt DateTime?
+
+  issuedById String?
+  issuedBy   User?   @relation("RecoveryTokenIssuer", fields: [issuedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, purpose])
+  @@index([ticketId])
+  @@index([expiresAt])
+  @@index([usedAt])
+}
+
+model IdentityVerificationAttempt {
+  id String @id @default(cuid())
+
+  ticketId String
+  ticket   AccountRecoveryTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  method IdentityVerificationMethod
+  status IdentityVerificationStatus @default(PENDING)
+
+  // Submitted identity values must not be stored in plain text.
+  identifierHash String?
+
+  dateOfBirthMatched Boolean?
+  emailMatched       Boolean?
+  phoneMatched       Boolean?
+
+  ipHash        String?
+  failureReason String?
+
+  createdAt DateTime @default(now())
+
+  @@index([ticketId, createdAt])
+  @@index([status])
+  @@index([method])
+}
+
+model SecurityAuditLog {
+  id String @id @default(cuid())
+
+  action  String
+  outcome String
+
+  actorUserId String?
+  actorUser   User?   @relation("SecurityAuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  targetUserId String?
+  targetUser   User?   @relation("SecurityAuditTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+
+  ticketId String?
+  ticket   AccountRecoveryTicket? @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+
+  ipHash    String?
+  userAgent String?
+  metadata  Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([action])
+  @@index([outcome])
+  @@index([actorUserId])
+  @@index([targetUserId])
+  @@index([ticketId])
+  @@index([createdAt])
+}
+
+model StaffNumberSequence {
+  year       Int      @id
+  lastNumber Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// ==========================================
+// 5. COMMUNICATIONS & NOTIFICATIONS
+// ==========================================
+
+model Notification {
+  id        String  @id @default(cuid())
+  title     String
+  message   String  @db.Text
+  actionUrl String?
+  isRead    Boolean @default(false)
+
+  // The recipient (User account)
+  userId String?
+  user   User?   @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+
+  // The recipient (Student registry record)
+  studentId String?
+  student   Student? @relation("StudentNotifications", fields: [studentId], references: [id], onDelete: Cascade)
+
+  // The sender (Who sent it)
+  senderId String?
+  sender   User?   @relation("NotificationsSent", fields: [senderId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([studentId])
+  @@index([userId, isRead])
+  @@index([createdAt])
+}
