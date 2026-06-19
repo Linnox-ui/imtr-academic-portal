@@ -17,12 +17,15 @@ import {
   publishResults,
   returnResultsToCoordinator,
 } from "./actions";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default async function AcademicDirectorResultsReviewPage() {
   const session = await auth();
-  if (!session?.user?.id) return { redirect: "/login" };
+  if (!session?.user?.id) {
+    redirect("/login");
+  }
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
@@ -40,7 +43,7 @@ export default async function AcademicDirectorResultsReviewPage() {
     user.accountStatus !== "ACTIVE" ||
     !["academic_director", "super_admin"].includes(user.role.name)
   ) {
-    return { redirect: "/unauthorized" };
+    redirect("/unauthorized");
   }
 
   const submissions = await prisma.resultSubmission.findMany({
