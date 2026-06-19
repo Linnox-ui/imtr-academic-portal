@@ -199,10 +199,10 @@ export async function reviewResultsByAcademicDirector(
         };
       }
       for (const result of submission.results) {
-        const admissionNumber = result.studentProfile.admissionNumber;
-        if (
-          result.studentProfile.intakeId !== submission.assessment.intake.id
-        ) {
+        const profile = result.studentProfile;
+        if (!profile) continue;
+        const admissionNumber = result.studentProfile!.admissionNumber;
+        if (profile.intakeId !== submission.assessment.intake.id) {
           return {
             error: `${admissionNumber} does not belong to the selected intake.`,
           };

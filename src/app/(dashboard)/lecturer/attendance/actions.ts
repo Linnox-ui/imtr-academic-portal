@@ -131,10 +131,7 @@ export async function saveLecturerAttendance(formData: FormData) {
   });
 
   if (!timetableEntry) {
-    redirectBack({
-      date: sessionDateText,
-      error: "The selected lesson is not assigned to you.",
-    });
+    throw new Error("Timetable entry not found.");
   }
 
   const dateDay = timetableDayFromDate(sessionDate!);

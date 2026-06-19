@@ -180,35 +180,44 @@ export async function reviewResultsByCoordinator(
         };
       }
       for (const result of submission.results) {
-        if (
-          result.studentProfile.intakeId !== submission.assessment.intake.id
-        ) {
+        // 1. Create a variable for the profile so we don't have to keep checking it
+        const profile = result.studentProfile;
+
+        // 2. If no profile exists, skip this student to prevent a crash
+        if (!profile) continue;
+
+        // 3. Now use 'profile' instead of 'result.studentProfile'
+        if (profile.intakeId !== submission.assessment.intake.id) {
           return {
-            error: `${result.studentProfile.admissionNumber} does not belong to the selected intake.`,
+            error: `${profile.admissionNumber} does not belong to the selected intake.`,
           };
         }
+
         if (result.isAbsent && result.isExempted) {
           return {
-            error: `${result.studentProfile.admissionNumber} cannot be both absent and exempted.`,
+            error: `${profile.admissionNumber} cannot be both absent and exempted.`,
           };
         }
+
         if (result.marks !== null && (result.isAbsent || result.isExempted)) {
           return {
-            error: `${result.studentProfile.admissionNumber} has marks despite being absent or exempted.`,
+            error: `${profile.admissionNumber} has marks despite being absent or exempted.`,
           };
         }
+
         if (result.marks === null && !result.isAbsent && !result.isExempted) {
           return {
-            error: `${result.studentProfile.admissionNumber} has no marks, absence, or exemption recorded.`,
+            error: `${profile.admissionNumber} has no marks, absence, or exemption recorded.`,
           };
         }
+
         if (
           result.marks !== null &&
           (result.marks.isNegative() ||
             result.marks.greaterThan(submission.assessment.maxMarks))
         ) {
           return {
-            error: `${result.studentProfile.admissionNumber} has marks outside the allowed range.`,
+            error: `${profile.admissionNumber} has marks outside the allowed range.`,
           };
         }
       }
