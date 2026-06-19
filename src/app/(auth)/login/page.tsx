@@ -1,16 +1,14 @@
+import { Suspense } from "react";
 import type { ElementType } from "react";
 import type { Metadata } from "next";
-
 import Image from "next/image";
 import Link from "next/link";
-
 import {
   ArrowRight,
   BadgeCheck,
   BookOpenCheck,
   ShieldCheck,
 } from "lucide-react";
-
 import { LoginForm } from "@/components/auth/login-form";
 
 export const metadata: Metadata = {
@@ -21,6 +19,8 @@ export const metadata: Metadata = {
     follow: false,
   },
 };
+
+export const dynamic = "force-dynamic";
 
 export default function LoginPage() {
   return (
@@ -50,7 +50,6 @@ export default function LoginPage() {
                 <p className="text-[10px] font-black uppercase tracking-[0.28em] text-sky-300">
                   Republic of Kenya
                 </p>
-
                 <p className="mt-1 text-lg font-black text-white">
                   IMTR Academic Portal
                 </p>
@@ -76,7 +75,6 @@ export default function LoginPage() {
 
             <div className="mt-9 grid max-w-lg grid-cols-2 gap-3">
               <Feature icon={BookOpenCheck} label="Academic records" />
-
               <Feature icon={BadgeCheck} label="Role-based access" />
             </div>
           </div>
@@ -104,7 +102,6 @@ export default function LoginPage() {
                 <p className="text-[9px] font-black uppercase tracking-[0.22em] text-sky-300">
                   Republic of Kenya
                 </p>
-
                 <p className="mt-0.5 font-black text-white">
                   IMTR Academic Portal
                 </p>
@@ -116,14 +113,19 @@ export default function LoginPage() {
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-sky-700">
                   Welcome back
                 </p>
-
                 <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-950">
                   Sign in
                 </h2>
               </div>
 
               <div className="px-6 pb-7 sm:px-8 sm:pb-8">
-                <LoginForm />
+                <Suspense
+                  fallback={
+                    <div className="h-40 w-full animate-pulse rounded-2xl bg-slate-200" />
+                  }
+                >
+                  <LoginForm />
+                </Suspense>
               </div>
             </div>
 
@@ -158,7 +160,6 @@ function Feature({ icon: Icon, label }: { icon: ElementType; label: string }) {
       <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-400/10 text-sky-300">
         <Icon className="h-4 w-4" />
       </div>
-
       <span className="text-xs font-black text-slate-300">{label}</span>
     </div>
   );
