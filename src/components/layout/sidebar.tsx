@@ -272,30 +272,45 @@ export function Sidebar({
               onClick={onMobileClose}
               title={isCollapsed ? item.label : undefined}
               className={cn(
-                "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200",
+                "group relative flex items-center gap-3 overflow-hidden rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-300",
                 isActive
                   ? "bg-gradient-to-r from-[#1E6B9B] to-[#16537A] text-white shadow-md shadow-black/10 ring-1 ring-white/10"
                   : "text-slate-300 hover:bg-white/5 hover:text-white",
                 isCollapsed && "justify-center px-0",
               )}
             >
+              {/* ANIMATED INDICATOR PILL */}
               <div
                 className={cn(
-                  "flex items-center justify-center transition-transform duration-200 group-hover:scale-110",
+                  "absolute left-0 top-1/2 h-1/2 w-1 -translate-y-1/2 rounded-r-full bg-sky-400 transition-all duration-300 ease-out",
+                  isActive ? "scale-y-100 opacity-100" : "scale-y-0 opacity-0",
+                )}
+              />
+
+              {/* ICON WITH SMOOTH HOVER SCALING */}
+              <div
+                className={cn(
+                  "relative z-10 flex items-center justify-center transition-transform duration-300",
                   isActive
-                    ? "text-white"
-                    : "text-slate-400 group-hover:text-sky-300",
+                    ? "scale-110 text-white"
+                    : "text-slate-400 group-hover:scale-110 group-hover:text-sky-300",
                 )}
               >
                 {item.icon}
               </div>
+
+              {/* TEXT WITH INTERACTIVE NUDGE */}
               {!isCollapsed ? (
-                <span className="flex-1">{item.label}</span>
+                <span className="relative z-10 flex-1 transition-transform duration-300 group-hover:translate-x-1">
+                  {item.label}
+                </span>
               ) : null}
+
+              {/* BADGE */}
               {!isCollapsed && item.badge ? (
                 <Badge
                   variant="secondary"
-                  className="ml-auto border-none bg-rose-500/90 text-white shadow-sm hover:bg-rose-500"
+                  className="relative z-10 ml-auto border-none bg-rose-500/90 text-white shadow-sm hover:bg-rose-500"
                 >
                   {item.badge}
                 </Badge>

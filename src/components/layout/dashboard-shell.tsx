@@ -2,13 +2,11 @@
 
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { Prisma } from "@prisma/client"; // Added Prisma import safely
+import { Prisma } from "@prisma/client";
 
 import { Header } from "./header";
 import { Sidebar } from "./sidebar";
-// import { Notification } from "./notification-bell"; // Commented out as we are now using Prisma's generated type
 
-// 1. Define the exact type directly from your Prisma schema
 export type NotificationItem = Prisma.NotificationGetPayload<{}>;
 
 type DashboardUser = {
@@ -28,7 +26,6 @@ type DashboardShellProps = {
   notifications: NotificationItem[];
 };
 
-// 3. Add notifications to the function arguments
 export function DashboardShell({
   children,
   user,
@@ -53,17 +50,22 @@ export function DashboardShell({
           isSidebarCollapsed ? "lg:pl-16" : "lg:pl-64"
         }`}
       >
-        <div className="sticky top-0 z-50 shrink-0 border-b border-border/70 bg-slate-50/90 backdrop-blur-xl">
+        {/* FIXED: Removed the conflicting light background wrapper. 
+            The Header component now handles its own dark background and blur. */}
+        <div className="z-40 shrink-0">
           <Header
             user={user}
-            notifications={notifications} // PASS THE LIVE DATA HERE INSTEAD OF []
+            notifications={notifications}
             onMenuClick={() => setIsMobileMenuOpen(true)}
           />
         </div>
 
-        <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
+        {/* UPGRADED: Added a subtle transparent background and smooth scrolling */}
+        <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-slate-50/50 scroll-smooth">
           <div className="mx-auto min-w-0 max-w-[1500px] px-3 py-4 sm:px-5 sm:py-6 lg:px-8 lg:py-8">
-            <div className="min-w-0 max-w-full animate-in fade-in duration-300">
+            {/* UPGRADED: This now waits for the Header to drop down (delay-200), 
+                then smoothly slides the main page content up from the bottom. */}
+            <div className="min-w-0 max-w-full animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200 fill-mode-both ease-out">
               {children}
             </div>
           </div>
